@@ -1,0 +1,210 @@
+# AI-Powered Supply Chain Risk Management
+
+# Import Libraries 
+
+mport pandas as pd
+import dateutil.parser
+import numpy as np
+import datetime
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+import seaborn as sns
+import matplotlib.pyplot as plt
+from plotly import graph_objects as go
+import plotly.express as px
+
+# Importing the Dataset
+
+df= pd.read_csv("../input/dataco-smart-supply-chain-for-big-data-analysis/DataCoSupplyChainDataset.csv", encoding_errors="ignore")
+df.info()
+
+
+# Cleaning our dataset and replace missing values
+
+np.sum(df.isna())
+
+df['Customer Zipcode'] = df['Customer Zipcode'].fillna(0)
+df['Order Zipcode'] = df['Order Zipcode'].fillna(0)
+df['Customer Fname'] = df['Customer Fname'].fillna("NotDetermined")
+df['Customer Full Name'] = df['Customer Fname'].astype(str) + df['Customer Lname'].astype(str)
+
+# Show new  Dataset
+
+dfData=df.drop(['Customer Email','Product Status','Customer Password','Customer Street','Customer Fname','Customer Lname',
+           'Product Description','Product Image','Order Zipcode','Customer Zipcode'],axis=1)
+dfData.shape
+
+dfData.columns = [col.lower().replace(' ', '_') for col in dfData.columns]
+dfData.rename(columns=lambda x: x.replace("(", "").replace(")", ""), inplace=True)
+dfData.columns
+
+Delivery=dfData.groupby('delivery_status')
+Market = dfData.groupby('market') 
+Region = dfData.groupby('order_region')
+Customer=dfData.groupby('customer_segment')
+Category=dfData.groupby('category_name')
+Shipping=dfData.groupby('shipping_mode')
+Region=dfData.groupby('order_region')
+
+# EDA 
+plt.figure(figsize=(10, 6))
+sns.histplot(data=dfData, x='sales', bins=30, kde=True)
+plt.title('Distribution of Sales')
+plt.xlabel('Sales')
+plt.ylabel('Frequency')
+plt.show()
+
+fig = px.choropleth(df_geo ,  locationmode='country names', locations='Order Country',
+                    color='Profit of Orders', # lifeExp is a column of data
+                    hover_name='Order Country', 
+                    #hover_data ='Order City',
+                    color_continuous_scale=px.colors.sequential.Plasma)
+
+fig.show()
+
+df_sales_country=df1.groupby([ 'Order Country'])['Sales'].sum().reset_index(name='Sales of Orders').sort_values(by= 'Sales of Orders', ascending= False)
+px.bar(df_sales_country.head(10), x='Sales of Orders',y = 'Order Country',color ='Sales of Orders')
+
+
+
+import plotly.express as px
+
+grouped_data = df.groupby('Category Name')['Sales'].sum().reset_index()
+
+fig = px.bar(grouped_data, x='Category Name', y='Sales', title='Aggregate Sales by Category')
+
+fig.show()
+
+
+Category_Name=df.groupby(['Category Name'])['Order Id'].count().reset_index(name='Number of Orders').sort_values(by= 'Number of Orders', ascending= True)
+px.bar(Category_Name, y='Number of Orders',x = 'Category Name',color ='Number of Orders')
+
+
+import plotly.express as px
+loss = df[df['Benefit per order'] < 0]
+loss_by_category = loss['Category Name'].value_counts().nlargest(10).reset_index()
+loss_by_category.columns = ['Category Name', 'Count']
+fig1 = px.bar(
+    loss_by_category,
+    x='Category Name',
+    y='Count',
+    title='Products with Most Loss',
+    labels={'Category Name': 'Product Category', 'Count': 'Count'},
+    template='plotly_dark',
+    width=800,
+    height=600
+)
+fig1.show()
+
+loss_by_region = loss['Order Region'].value_counts().nlargest(10).reset_index()
+loss_by_region.columns = ['Order Region', 'Count']
+fig2 = px.bar(
+    loss_by_region,
+    x='Order Region',
+    y='Count',
+    title='Regions with Most Loss',
+    labels={'Order Region': 'Region', 'Count': 'Count'},
+    template='plotly_dark',
+    width=800,
+    height=600
+)
+
+fig2.show()
+
+total_loss = loss['Benefit per order'].sum()
+print("Total loss: ", total_loss)
+
+ # Correlation
+
+df_numeric = df.select_dtypes(include='number')
+
+corr_matrix = df_numeric.corr()
+
+plt.figure(figsize=(20, 14))
+sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', vmin=-1, vmax=1, annot_kws={"size": 8})
+plt.title('Correlation Matrix')
+plt.show()
+
+# Prediction
+
+columns_to_drop = ['Customer City', 'Customer Country','Customer State',
+                   'Customer Street', 'Department Name', 'Order City',
+                   'Order Country', 'order date (DateOrders)','Product Name', 'shipping date (DateOrders)']
+new_df = new_df.drop(columns=columns_to_drop)
+
+new_df
+
+
+from sklearn.preprocessing import LabelEncoder
+
+label_encoder = LabelEncoder()
+
+encoded_df = new_df.copy()  
+for column in new_df.columns:
+    if new_df[column].dtype == 'object':  
+        encoded_df[column] = label_encoder.fit_transform(new_df[column])
+
+encoded_df
+
+encoded_df.isna().sum()
+
+y = encoded_df['Days for shipping (real)']
+X = encoded_df.drop('Days for shipping (real)',axis=1)
+
+
+def decimal_scaling(df):
+    for col in df.columns:
+        if pd.api.types.is_numeric_dtype(df[col]):
+            max_val = df[col].abs().max()
+            factor = 10 ** len(str(int(max_val)))
+            df[col] = df[col] / factor
+    return df
+
+X = decimal_scaling(X)
+
+# Model Training
+
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
+from sklearn.linear_model import LogisticRegression, Perceptron
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, AdaBoostClassifier
+from sklearn.svm import SVC
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.naive_bayes import GaussianNB, MultinomialNB
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis
+from xgboost import XGBClassifier
+from catboost import CatBoostClassifier
+from lightgbm import LGBMClassifier
+
+
+models = {
+    'Decision Tree': DecisionTreeClassifier(),
+    'Random Forest': RandomForestClassifier(),
+    'K-Nearest Neighbors': KNeighborsClassifier(),
+    'Naive Bayes': GaussianNB(),
+    'Linear Discriminant Analysis': LinearDiscriminantAnalysis(),
+    'XGBoost': XGBClassifier(),
+    'CatBoost': CatBoostClassifier(),
+    'LightGBM': LGBMClassifier(),
+    'AdaBoost': AdaBoostClassifier(),
+    'Perceptron': Perceptron()
+
+import plotly.graph_objects as go
+from sklearn.metrics import accuracy_score
+
+model_scores = {}  
+
+for name, model in models.items():
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+    acc_score = accuracy_score(y_test, y_pred)
+    print(f'{name}:')
+    print(f'  Accuracy Score: {acc_score}\n')
+    model_scores[name] = acc_score  # Storing model name and accuracy score
+
+# Plotting bar chart using Plotly
+fig = go.Figure([go.Bar(x=list(model_scores.keys()), y=list(model_scores.values()))])
+fig.update_layout(title='Accuracy Scores of Models',
+                  xaxis_title='Model Name',
+                  yaxis_title='Accuracy Score')
+fig.show()
